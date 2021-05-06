@@ -1,0 +1,161 @@
+---
+# Setup of RUTX11 device after firmware update (some setting dissapear)
+# * it installs:
+# * HAProxy, iperf3, collectd + mods,
+# * luci_statistics (with special exec showing GSM signal strenght and temperature, vnstat, bandwidthd
+
+# todo: add luci and other parts based on setup file
+
+- name: Setup rutx11 after firmware update
+  hosts: 192.168.1.1
+  gather_facts: false
+  vars:
+    data_folder: "/data"
+    data_path: "/mnt/sda1"
+    opkg_path: "/tmp/opkg-lists"
+    iperf3_path: "/usr/bin/iperf3"
+    haproxy_path: "/usr/sbin/haproxy"
+    haproxy_enabled_path: "/etc/rc.d/S99haproxy"
+    gsmctl_path: "/usr/sbin/gsmctl"
+    collectd_path: "/usr/sbin/collectd"
+    collectd_enabled_path: "/etc/rc.d/S80collectd"
+    collectd_mod1_path: "/usr/lib/lua/luci/statistics/plugins/cpu.lua"
+    collectd_modx_path: "/usr/lib/lua/luci/statistics/plugins/df.lua"
+
+  tasks:
+    - name: Show the device details
+      raw: uname -a
+      changed_when: false
+      register: conn_status
+    - name: Show the device details - debug
+      debug: verbosity=0 msg="{{ conn_status.stdout }}"
+
+    - name: Mount {{ data_folder }} folder if not exists
+      # If link do not exists then make a link
+      raw: >
+        [[ ! -L {{ data_folder }} -a -d {{ data_path }} ]] &&
+        ln -s {{ data_path }} {{ data_folder }}
+      register: link_status
+      changed_when: link_status.rc == 0
+      failed_when: link_status.rc > 1
+    - name: Mount {{ data_folder }} folder - debug
+      debug: msg="{{ link_status.stdout_lines }}"
+      when: link_status.rc > 1
+
+    - name: Update repos for OpenWRT (OPKG update)
+      raw: "[[ ! -d {{ opkg_path }} ]] && opkg update"
+      register: opkg_update_status
+      changed_when: opkg_update_status.rc == 0
+      failed_when: opkg_update_status.rc > 1
+    - name: Show update status
+      debug: msg="{{ opkg_update_status.stdout_lines }}"
+      when: opkg_update_status.rc != 1
+
+    - name: Install Iperf3 (network speed testing tool)
+      raw: "[[ ! -x  {{ iperf3_path }} ]] && opkg install iperf3"
+      register: iperf3_status
+      changed_when: iperf3_status.rc == 0
+      failed_when: iperf3_status.rc > 1
+    - name: Show installation status - iperf3
+      debug: msg="{{ iperf3_status.stdout_lines }}"
+      when: iperf3_status.rc != 1
+
+    - name: Install HAProxy (TCP/HTTP load-balancer)
+      raw: "[[ ! -x  {{ haproxy_path }} ]] && opkg install haproxy"
+      register: haproxy_status
+      changed_when: haproxy_status.rc == 0
+      failed_when: haproxy_status.rc > 1
+    - name: Show installation status - HAProxy
+      debug: msg="{{ haproxy_status.stdout_lines }}"
+      when: haproxy_status.rc != 1
+
+    - name: Enable HAProxy at boot and start it
+      raw: "[[ ! -L {{ haproxy_enabled_path }} ]] && /etc/init.d/haproxy enable && /etc/init.d/haproxy start"
+      register: haproxy_enabled_status
+      changed_when: haproxy_enabled_status.rc == 0
+      failed_when: haproxy_enabled_status.rc > 1
+    - name: Show installation status - HAProxy start and enable at start
+      debug: msg="{{ haproxy_enabled_status.stdout_lines }}"
+      when: haproxy_enabled_status.rc != 1
+
+    - name: "*** Install statistics"
+      block:
+
+      - name: Correct permissions for gsmctl to eliminate need for SUDO
+        raw: "[[ -x {{ gsmctl_path }} -a ! -u {{ gsmctl_path }} ]] && chmod +s /usr/sbin/gsmctl"
+        register: gsmctl_status
+        changed_when: gsmctl_status.rc == 0
+        failed_when: gsmctl_status.rc > 1
+      - name: Show gsmctl set permission status
+        debug: msg="{{ gsmctl_status.stdout_lines }}"
+        when: gsmctl_status.rc > 1
+
+      - name: Install CollectD tool
+        raw: "[[ ! -x {{ collectd_path }} ]] && opkg install collectd"
+        register: collectd_status
+        changed_when: collectd_status.rc == 0
+        failed_when: collectd_status.rc > 1
+      - name: Show installation status - CollectD
+        debug: msg="{{ collectd_status.stdout_lines }}"
+        when: collectd_status.rc != 1
+
+      - name: Install CollectD basic modules (cpu, memory, rrdtool, ...)
+        raw: >
+          [[ ! -f {{ collectd_mod1_path }} ]] &&
+          opkg install
+          collectd-mod-cpu
+          collectd-mod-interface
+          collectd-mod-memory
+          collectd-mod-ping
+          collectd-mod-rrdtool
+          collectd-mod-wireless
+          collectd-mod-iwinfo
+          collectd-mod-load
+        register: collectd_mod1_status
+        changed_when: collectd_mod1_status.rc == 0
+        failed_when: collectd_mod1_status.rc > 1
+      - name: Show installation status - CollectD basic modules
+        debug: msg="{{ collectd_mod1_status.stdout_lines }}"
+        when: collectd_mod1_status.rc != 1
+
+      - name: Install CollectD extended modules (csv, df, exec, ...)
+        raw: >
+          [[ ! -f {{ collectd_modx_path }} ]] &&
+          opkg install
+          collectd-mod-csv
+          collectd-mod-curl
+          collectd-mod-df
+          collectd-mod-disk
+          collectd-mod-dns
+          collectd-mod-exec
+          collectd-mod-filecount
+          collectd-mod-match-regex
+          collectd-mod-mqtt
+          collectd-mod-netlink
+          collectd-mod-ping
+          collectd-mod-protocols
+          collectd-mod-snmp
+          collectd-mod-table
+          collectd-mod-tcpconns
+          collectd-mod-uptime
+          collectd-mod-write-http
+          collectd-mod-logfile
+          collectd-mod-syslog
+          collectd-mod-network
+        register: collectd_modx_status
+        changed_when: collectd_modx_status.rc == 0
+        failed_when: collectd_modx_status.rc > 1
+      - name: Show installation status - CollectD extended modules
+        debug: msg="{{ collectd_modx_status.stdout_lines }}"
+        when: collectd_modx_status.rc != 1
+
+      - name: Enable CollectD at boot and start it
+        raw: "[[ ! -L {{ collectd_enabled_path }} ]] && /etc/init.d/collectd enable && /etc/init.d/collectd start"
+        register: collectd_enabled_status
+        changed_when: collectd_enabled_status.rc == 0
+        failed_when: collectd_enabled_status.rc > 1
+      - name: Show installation status - CollectD start and enable at start
+        debug: msg="{{ collectd_enabled_status.stdout_lines }}"
+        when: collectd_status.rc != 1
+
+#  - name: Install LUCI statistics
