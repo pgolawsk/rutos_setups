@@ -13,14 +13,28 @@
     data_folder: "/data"
     data_path: "/mnt/sda1"
     opkg_path: "/tmp/opkg-lists"
+    iperf3_package: "iperf3"
     iperf3_path: "/usr/bin/iperf3"
-    haproxy_path: "/usr/sbin/haproxy"
+    haproxy_package: "haproxy"
+    haproxy_path: "/etc/init.d/haproxy"
     haproxy_enabled_path: "/etc/rc.d/S99haproxy"
     gsmctl_path: "/usr/sbin/gsmctl"
-    collectd_path: "/usr/sbin/collectd"
+    collectd_package: "collectd"
+    collectd_path: "/etc/init.d/collectd"
     collectd_enabled_path: "/etc/rc.d/S80collectd"
     collectd_mod1_path: "/usr/lib/lua/luci/statistics/plugins/cpu.lua"
     collectd_modx_path: "/usr/lib/lua/luci/statistics/plugins/df.lua"
+    luci_statistics_package: "luci-app-statistics"
+    luci_statistics_path: "/etc/init.d/luci_statistics"
+    luci_statistics_enabled_path: "/etc/rc.d/S79luci_statistics"
+    vnstat_package: "vnstat luci-app-vnstat"
+    vnstat_path: "/etc/init.d/vnstat"
+    vnstat_data_path: "/mnt/sda1/vnstat"  # ! not used
+    vnstat_enabled_path: "/etc/rc.d/S99vnstat"
+    bandwidthd_package: "bandwidthd-sqlite"
+    bandwidthd_path: "/etc/init.d/bandwidthd"
+    bandwidthd_data_path: "/mnt/sda1/bandwidthd"  # ! not used
+    bandwidthd_enabled_path: "/etc/rc.d/S99bandwidthd"
 
   tasks:
     - name: Show the device details
@@ -52,7 +66,7 @@
       when: opkg_update_status.rc != 1
 
     - name: Install Iperf3 (network speed testing tool)
-      raw: "[[ ! -x  {{ iperf3_path }} ]] && opkg install iperf3"
+      raw: "[[ ! -x  {{ iperf3_path }} ]] && opkg install {{ iperf3_package }}"
       register: iperf3_status
       changed_when: iperf3_status.rc == 0
       failed_when: iperf3_status.rc > 1
@@ -60,8 +74,9 @@
       debug: msg="{{ iperf3_status.stdout_lines }}"
       when: iperf3_status.rc != 1
 
+      # Install HAProxy
     - name: Install HAProxy (TCP/HTTP load-balancer)
-      raw: "[[ ! -x  {{ haproxy_path }} ]] && opkg install haproxy"
+      raw: "[[ ! -x  {{ haproxy_path }} ]] && opkg install {{ haproxy_package }}"
       register: haproxy_status
       changed_when: haproxy_status.rc == 0
       failed_when: haproxy_status.rc > 1
@@ -70,7 +85,7 @@
       when: haproxy_status.rc != 1
 
     - name: Enable HAProxy at boot and start it
-      raw: "[[ ! -L {{ haproxy_enabled_path }} ]] && /etc/init.d/haproxy enable && /etc/init.d/haproxy start"
+      raw: "[[ ! -L {{ haproxy_enabled_path }} ]] && {{ haproxy_path }} enable && {{ haproxy_path }} start"
       register: haproxy_enabled_status
       changed_when: haproxy_enabled_status.rc == 0
       failed_when: haproxy_enabled_status.rc > 1
@@ -82,7 +97,7 @@
       block:
 
       - name: Correct permissions for gsmctl to eliminate need for SUDO
-        raw: "[[ -x {{ gsmctl_path }} -a ! -u {{ gsmctl_path }} ]] && chmod +s /usr/sbin/gsmctl"
+        raw: "[[ -x {{ gsmctl_path }} -a ! -u {{ gsmctl_path }} ]] && chmod +s {{ gsmctl_path }}"
         register: gsmctl_status
         changed_when: gsmctl_status.rc == 0
         failed_when: gsmctl_status.rc > 1
@@ -90,8 +105,9 @@
         debug: msg="{{ gsmctl_status.stdout_lines }}"
         when: gsmctl_status.rc > 1
 
+      # Install CollectD and modules
       - name: Install CollectD tool
-        raw: "[[ ! -x {{ collectd_path }} ]] && opkg install collectd"
+        raw: "[[ ! -x {{ collectd_path }} ]] && opkg install {{ collectd_package }}"
         register: collectd_status
         changed_when: collectd_status.rc == 0
         failed_when: collectd_status.rc > 1
@@ -150,12 +166,68 @@
         when: collectd_modx_status.rc != 1
 
       - name: Enable CollectD at boot and start it
-        raw: "[[ ! -L {{ collectd_enabled_path }} ]] && /etc/init.d/collectd enable && /etc/init.d/collectd start"
+        raw: "[[ ! -L {{ collectd_enabled_path }} ]] && {{ collectd_path }} enable && {{ collectd_path }} start"
         register: collectd_enabled_status
         changed_when: collectd_enabled_status.rc == 0
         failed_when: collectd_enabled_status.rc > 1
       - name: Show installation status - CollectD start and enable at start
         debug: msg="{{ collectd_enabled_status.stdout_lines }}"
-        when: collectd_status.rc != 1
+        when: collectd_enabled_status.rc != 1
 
-#  - name: Install LUCI statistics
+      # Install LUCI Statistics
+      - name: Install LUCI Statistics (CollectD tool web interface)
+        raw: "[[ ! -x {{ luci_statistics_path }} ]] && opkg install --nodeps {{ luci_statistics_package }}"
+        register: luci_statistics_status
+        changed_when: luci_statistics_status.rc == 0
+        failed_when: luci_statistics_status.rc > 1
+      - name: Show installation status - LUCI Statistics
+        debug: msg="{{ luci_statistics_status.stdout_lines }}"
+        when: luci_statistics_status.rc != 1
+
+      # TODO: Modify Teltonika skin to customize for statistics menu (copy icons and style.css)
+      - name: Enable LUCI Statistics at boot and start it
+        raw: "[[ ! -L {{ luci_statistics_enabled_path }} ]] && {{ luci_statistics_path }} enable && {{ luci_statistics_path }} start"
+        register: luci_statistics_enabled_status
+        changed_when: luci_statistics_enabled_status.rc == 0
+        failed_when: luci_statistics_enabled_status.rc > 1
+      - name: Show installation status - LUCI Statistics start and enable at start
+        debug: msg="{{ luci_statistics_enabled_status.stdout_lines }}"
+        when: luci_statistics_enabled_status.rc != 1
+
+      # Install VNStat
+      - name: Install VNStat (collecting/monitoring GSM/LTE data plan)
+        raw: "[[ ! -x {{ vnstat_path }} ]] && opkg install --nodeps {{ vnstat_package }}"
+        register: vnstat_status
+        changed_when: vnstat_status.rc == 0
+        failed_when: vnstat_status.rc > 1
+      - name: Show installation status - VNStat
+        debug: msg="{{ vnstat_status.stdout_lines }}"
+        when: vnstat_status.rc != 1
+
+      - name: Enable VNStat at boot and start it
+        raw: "[[ ! -L {{ vnstat_enabled_path }} ]] && {{ vnstat_path }} enable && {{ vnstat_path }} start"
+        register: vnstat_enabled_status
+        changed_when: vnstat_enabled_status.rc == 0
+        failed_when: vnstat_enabled_status.rc > 1
+      - name: Show installation status - VNStat start and enable at start
+        debug: msg="{{ vnstat_enabled_status.stdout_lines }}"
+        when: vnstat_enabled_status.rc != 1
+
+      # Install BandwidthD
+      - name: Install BandwidthD (collecting/monitoring summary of traffic data by IP daily/weekly/monthly/yearly)
+        raw: "[[ ! -x {{ bandwidthd_path }} ]] && opkg install {{ bandwidthd_package }}"
+        register: bandwidthd_status
+        changed_when: bandwidthd_status.rc == 0
+        failed_when: bandwidthd_status.rc > 1
+      - name: Show installation status - BandwidthD
+        debug: msg="{{ bandwidthd_status.stdout_lines }}"
+        when: bandwidthd_status.rc != 1
+
+      - name: Enable BandwidthD at boot and start it
+        raw: "[[ ! -L {{ bandwidthd_enabled_path }} ]] && {{ bandwidthd_path }} enable && {{ bandwidthd_path }} start"
+        register: bandwidthd_enabled_status
+        changed_when: bandwidthd_enabled_status.rc == 0
+        failed_when: bandwidthd_enabled_status.rc > 1
+      - name: Show installation status - BandwidthD start and enable at start
+        debug: msg="{{ bandwidthd_enabled_status.stdout_lines }}"
+        when: bandwidthd_enabled_status.rc != 1
