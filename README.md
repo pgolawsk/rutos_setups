@@ -12,7 +12,8 @@ This repository contains Ansible scripts for RutOS devices to recreate setup on 
   * ```CollectD``` - collecting statistics localy of cpu, memory, disk IO, ping and many others; uses pre-esisting ```/etc/collectd.conf``` file;
     * it includes specific ```exec``` mod for customized stats for GSM/LTE signal strenght and device temperatre recordings;
   * ```LUCI-statistics``` - displaying CollectD statistics on web interface; uses pre-existing ```/etc/config/luci_statistics``` setup file;
-  * ```VNStat``` - gathering summary data total transfered data by interface by day/month, ... (to monitor use of GSM/LTE data plans); uses pre-existing ```/etc/config/vnstat``` setup file;
+    * it includes specific ```exec``` LUA script to display above data (```/usr/lib/lua/luci/statistics/rrdtool/definitions/exec.lua```);
+    * ```VNStat``` - gathering summary data total transfered data by interface by day/month, ... (to monitor use of GSM/LTE data plans); uses pre-existing ```/etc/config/vnstat``` and ```/etc/vnstat.conf``` setup files;
   * ```BandwidthD``` - gathering by IP/host summary stats of data transferred by device by day/week/month; uses pre-existing ```/etc/config/bandwidth``` setup file;
 
 (to be added soon)
