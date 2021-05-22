@@ -4,7 +4,7 @@
 # * HAProxy, iperf3, collectd + mods,
 # * luci_statistics (with special exec showing GSM signal strenght and temperature, vnstat, bandwidthd
 
-# todo: add luci and other parts based on setup file
+# TODO: Modify Teltonika skin to customize for statistics menu (copy icons and style.css)
 
 - name: Setup rutx11 after firmware update
   hosts: 192.168.1.1
@@ -18,23 +18,40 @@
     haproxy_package: "haproxy"
     haproxy_path: "/etc/init.d/haproxy"
     haproxy_enabled_path: "/etc/rc.d/S99haproxy"
-    gsmctl_path: "/usr/sbin/gsmctl"
+    haproxy_config_path: "/etc/haproxy.conf"
     collectd_package: "collectd"
     collectd_path: "/etc/init.d/collectd"
     collectd_enabled_path: "/etc/rc.d/S80collectd"
+    collectd_config_path: "/etc/collectd.conf"
     collectd_mod1_path: "/usr/lib/lua/luci/statistics/plugins/cpu.lua"
     collectd_modx_path: "/usr/lib/lua/luci/statistics/plugins/df.lua"
     luci_statistics_package: "luci-app-statistics"
     luci_statistics_path: "/etc/init.d/luci_statistics"
     luci_statistics_enabled_path: "/etc/rc.d/S79luci_statistics"
+    # ? luci_statistics_config_path in /etc/config and backed out automatically
     vnstat_package: "vnstat luci-app-vnstat"
     vnstat_path: "/etc/init.d/vnstat"
+    vnstat_config_path: "/etc/vnstat.conf"
     vnstat_data_path: "/mnt/sda1/vnstat"  # ! not used
     vnstat_enabled_path: "/etc/rc.d/S99vnstat"
     bandwidthd_package: "bandwidthd-sqlite"
     bandwidthd_path: "/etc/init.d/bandwidthd"
+    bandwidthd_config_path: "/etc/bandwidthd.conf"
     bandwidthd_data_path: "/mnt/sda1/bandwidthd"  # ! not used
     bandwidthd_enabled_path: "/etc/rc.d/S99bandwidthd"
+
+    # variables for additional script of monitoring of signal strenght and device temperature
+    gsmctl_path: "/usr/sbin/gsmctl"
+    # gsmkpi script collects data, it uses gsmctl; but for collectd tu run it the gsmctl must be runable as root
+    gsmkpi_path: "/bin/gsmkpi"
+    # LUA exec script path for exec module display of gsmkpi results
+    luci_statistics_exec_lua_path: "/usr/lib/lua/luci/statistics/rrdtool/definitions/exec.lua"
+
+    # sysupgrade_config_path: "/root/sysupgrade.conf"
+    sysupgrade_config_path: "/etc/sysupgrade.conf"
+    sysupgrade_config_preserve_paths:
+      - "/etc/sudoers"
+      - "/etc/dropbear/authorized_keys"
 
   tasks:
     - name: Show the device details
@@ -42,7 +59,7 @@
       changed_when: false
       register: conn_status
     - name: Show the device details - debug
-      debug: verbosity=0 msg="{{ conn_status.stdout }}"
+      debug: verbosity=0 msg="{{ conn_status.stdout_lines.0 }}"
 
     - name: Mount {{ data_folder }} folder if not exists
       # If link do not exists then make a link
@@ -83,6 +100,9 @@
     - name: Show installation status - HAProxy
       debug: msg="{{ haproxy_status.stdout_lines }}"
       when: haproxy_status.rc != 1
+    - name: Set {{ haproxy_config_path }} on paths to preserve next restore/upgrade
+      set_fact:
+        sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [haproxy_config_path] }}"
 
     - name: Enable HAProxy at boot and start it
       raw: "[[ ! -L {{ haproxy_enabled_path }} ]] && {{ haproxy_path }} enable && {{ haproxy_path }} start"
@@ -114,6 +134,9 @@
       - name: Show installation status - CollectD
         debug: msg="{{ collectd_status.stdout_lines }}"
         when: collectd_status.rc != 1
+      - name: Set {{ collectd_config_path }} on paths to preserve next restore/upgrade
+        set_fact:
+          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [collectd_config_path] }}"
 
       - name: Install CollectD basic modules (cpu, memory, rrdtool, ...)
         raw: >
@@ -165,6 +188,27 @@
         debug: msg="{{ collectd_modx_status.stdout_lines }}"
         when: collectd_modx_status.rc != 1
 
+      # Install EXEC module
+      - name: Check if {{ gsmkpi_path }} command exists
+        raw: "[[ -f {{ gsmkpi_path }} ]]"
+        register: gsmkpi_status
+        changed_when: false
+        failed_when: gsmkpi_status.rc > 1
+      - name: Set {{ gsmkpi_path }} on paths to preserve next restore/upgrade
+        set_fact:
+          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [gsmkpi_path] }}"
+        when: gsmkpi_status.rc == 0
+
+      - name: Check if {{ luci_statistics_exec_lua_path }} script exists
+        raw: "[[ -f {{ luci_statistics_exec_lua_path }} ]]"
+        register: lua_status
+        changed_when: false
+        failed_when: lua_status.rc > 1
+      - name: Set {{ luci_statistics_exec_lua_path }} on paths to preserve next restore/upgrade
+        set_fact:
+          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [luci_statistics_exec_lua_path] }}"
+        when: lua_status.rc == 0
+
       - name: Enable CollectD at boot and start it
         raw: "[[ ! -L {{ collectd_enabled_path }} ]] && {{ collectd_path }} enable && {{ collectd_path }} start"
         register: collectd_enabled_status
@@ -203,6 +247,10 @@
       - name: Show installation status - VNStat
         debug: msg="{{ vnstat_status.stdout_lines }}"
         when: vnstat_status.rc != 1
+      - name: Set {{ vnstat_config_path }} on paths to preserve next restore/upgrade
+        set_fact:
+          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [vnstat_config_path] }}"
+
 
       - name: Enable VNStat at boot and start it
         raw: "[[ ! -L {{ vnstat_enabled_path }} ]] && {{ vnstat_path }} enable && {{ vnstat_path }} start"
@@ -222,6 +270,9 @@
       - name: Show installation status - BandwidthD
         debug: msg="{{ bandwidthd_status.stdout_lines }}"
         when: bandwidthd_status.rc != 1
+      - name: Set {{ bandwidthd_config_path }} on paths to preserve next restore/upgrade
+        set_fact:
+          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [bandwidthd_config_path] }}"
 
       - name: Enable BandwidthD at boot and start it
         raw: "[[ ! -L {{ bandwidthd_enabled_path }} ]] && {{ bandwidthd_path }} enable && {{ bandwidthd_path }} start"
@@ -231,3 +282,73 @@
       - name: Show installation status - BandwidthD start and enable at start
         debug: msg="{{ bandwidthd_enabled_status.stdout_lines }}"
         when: bandwidthd_enabled_status.rc != 1
+
+    - name: Ensure list of files is preserved for next upgrades
+      block:
+
+      - name: Set timestamp for backup files
+        raw: "date +'%Y-%m-%d_%H%M%S'"
+        register: backup_file_timestamp
+        changed_when: false
+        failed_when: false
+      - name: Clean timestamp
+        set_fact:
+          backup_file_timestamp="_ansible_backup_{{ backup_file_timestamp.stdout_lines.0 }}" timestamp="{{ backup_file_timestamp.stdout_lines.0 }}"
+      # - name: Show timestamp for backup files
+      #   debug: msg="{{ backup_file_timestamp }}"
+
+      - name: Create blank {{ sysupgrade_config_path }} if the file not exists
+        raw: >
+          [[ ! -f {{ sysupgrade_config_path }} ]] &&
+          echo '## This file contains files and directories that should be preserved during an upgrade.' >> {{ sysupgrade_config_path }} &&
+          echo '## Created vi Ansible playbook at: {{ timestamp }}' >> {{ sysupgrade_config_path }}
+        register: sysupgrade_blank_status
+        changed_when: sysupgrade_blank_status.rc == 0
+        failed_when: sysupgrade_blank_status.rc > 1
+
+      - name: Make backup of {{ sysupgrade_config_path }}
+        raw: "[[ -f {{ sysupgrade_config_path }} ]] && cp {{ sysupgrade_config_path }} {{ sysupgrade_config_path }}{{ backup_file_timestamp }}"
+        register: sysupgrade_backup_status
+        changed_when: false
+        failed_when: sysupgrade_backup_status.rc > 1
+
+      - name: Recognize which are symbolic links and source files needs to be added to {{ sysupgrade_config_path }}
+        raw: >
+          [[ -L {{ item  }} ]] &&
+          readlink -n {{ item }}
+        register: sysupgrade_config_preserve_links
+        changed_when: false
+        failed_when: sysupgrade_config_preserve_links.rc > 1
+        with_items: "{{ sysupgrade_config_preserve_paths }}"
+
+      - name: Adding source files from links to add to {{ sysupgrade_config_path }}
+        set_fact:
+          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [item.stdout] }}"
+        when: item.stdout != ""
+        with_items: "{{ sysupgrade_config_preserve_links.results }}"
+        loop_control:
+          label: "{{ item.stdout }}"
+
+      - name: Adding missing files to preserve in {{ sysupgrade_config_path }}
+        raw: >
+          [[ -f {{ sysupgrade_config_path }} ]] &&
+          ! grep -q '^{{ item }}$' {{ sysupgrade_config_path }} &&
+          echo '{{ item }}' >> {{ sysupgrade_config_path }}
+        register: sysupgrade_preserve_status
+        changed_when: sysupgrade_preserve_status.rc == 0
+        failed_when: sysupgrade_preserve_status.rc > 1
+        with_items: "{{ sysupgrade_config_preserve_paths }}"
+        loop_control:
+          label: "{{ item }}"
+      # - name: Show added files to {{ sysupgrade_config_path }}
+      #   debug:
+      #     var: sysupgrade_preserve_status
+
+      - name: Preserve backup of {{ sysupgrade_config_path }}{{ backup_file_timestamp }} if changes were made
+        raw: >
+          [[ -f {{ sysupgrade_config_path }}{{ backup_file_timestamp }} ]] &&
+          cmp -s {{ sysupgrade_config_path }} {{ sysupgrade_config_path }}{{ backup_file_timestamp }} &&
+          rm {{ sysupgrade_config_path }}{{ backup_file_timestamp }}
+        register: sysupgrade_backup_remove_status
+        changed_when: sysupgrade_backup_remove_status.rc == 1
+        failed_when: sysupgrade_backup_remove_status.rc > 1
