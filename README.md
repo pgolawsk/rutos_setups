@@ -14,8 +14,8 @@ This repository contains Ansible scripts for RutOS devices to recreate setup on 
   * ```LUCI-statistics``` - displaying CollectD statistics on web interface; uses pre-existing ```/etc/config/luci_statistics``` setup file;
     * it includes specific ```exec``` LUA script to display above data (```/usr/lib/lua/luci/statistics/rrdtool/definitions/exec.lua```);
   * ```VNStat``` - gathering summary data total transfered data by interface by day/month, ... (to monitor use of GSM/LTE data plans); uses pre-existing ```/etc/config/vnstat``` and ```/etc/vnstat.conf``` setup files;
-  * ```BandwidthD``` - gathering by IP/host summary stats of data transferred by device by day/week/month; uses pre-existing ```/etc/config/bandwidth``` setup file;
-  * update ```/etc/sysupgrade.conf``` file to presere other mentioned above setup files for future firmware upgrades (so current setup is not lost post upgrade)
+  * ```BandwidthD``` - gathering by IP/host summary stats of data transferred by device by day/week/month; uses pre-existing ```/etc/config/bandwidthd``` and ```/etc/bandwidthd.conf`` setup files;
+  * update (or create if does not exists) ```/etc/sysupgrade.conf``` file to presere other mentioned above setup files for future firmware upgrades (so current setup is not lost post the upgrade)
 
 (to be added soon)
   * Modify Teltonika skin to customize it for statistics menu (copy icons and style.css)
