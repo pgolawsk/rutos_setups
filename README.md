@@ -15,10 +15,10 @@ This repository contains Ansible scripts for RutOS devices to recreate setup on 
     * it includes specific ```exec``` LUA script to display above data (```/usr/lib/lua/luci/statistics/rrdtool/definitions/exec.lua```);
   * ```VNStat``` - gathering summary data total transfered data by interface by day/month, ... (to monitor use of GSM/LTE data plans); uses pre-existing ```/etc/config/vnstat``` and ```/etc/vnstat.conf``` setup files;
   * ```BandwidthD``` - gathering by IP/host summary stats of data transferred by device by day/week/month; uses pre-existing ```/etc/config/bandwidth``` setup file;
-
-(to be added soon)
   * update ```/etc/sysupgrade.conf``` file to presere other mentioned above setup files for future firmware upgrades (so current setup is not lost post upgrade)
 
+(to be added soon)
+  * Modify Teltonika skin to customize it for statistics menu (copy icons and style.css)
 ## Usage
 Before running it please create valid inventory file - see example in ```inventory_example.ini```.
 
@@ -30,6 +30,6 @@ ansible-playbook -i my_inventory_file.ini playbooks/rutx11_setup.yml
 
 ## My future plans for playbooks (TODO)
 
-- [ ] ```rutx11_setup.yml``` - to split it into a few scripts for clean device, recreate only and divide scripts into some components for different packages - like collectd, badwithd, vnstat, ...
+- [ ] ```rutx11_setup.yml``` - to split it into a few scripts for clean device, recreate only and divide scripts into some components for different packages - like collectd, bandwidthd, vnstat, ...
 
 [//]: # (None at the moment)
