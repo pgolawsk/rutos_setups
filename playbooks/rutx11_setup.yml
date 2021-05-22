@@ -3,6 +3,8 @@
 # * it installs:
 # * HAProxy, iperf3, collectd + mods,
 # * luci_statistics (with special exec showing GSM signal strenght and temperature, vnstat, bandwidthd
+# * vnstat, bandwidthd
+# * /etc/sysupgrade.conf (to preserve config files)
 
 # TODO: Modify Teltonika skin to customize for statistics menu (copy icons and style.css)
 
