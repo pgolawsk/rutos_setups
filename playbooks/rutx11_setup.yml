@@ -326,7 +326,7 @@
       - name: Adding source files from links to add to {{ sysupgrade_config_path }}
         set_fact:
           sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [item.stdout] }}"
-        when: item.stdout != ""
+        when: item.stdout|length > 0
         with_items: "{{ sysupgrade_config_preserve_links.results }}"
         loop_control:
           label: "{{ item.stdout }}"
