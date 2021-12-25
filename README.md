@@ -1,9 +1,11 @@
 # rutos_setups
+
 RutOS automated setups through Ansible.
 
 Author Pawel Golawski <pawel.golawski@2com.pl>
 
 ## Contents
+
 This repository contains Ansible scripts for RutOS devices to recreate setup on new device or after firmware update.
 
 * ```playbooks/rutx11_setup.yml``` - this is recreate setup script after firmware update. It re-installs:
@@ -20,9 +22,8 @@ This repository contains Ansible scripts for RutOS devices to recreate setup on 
   * ```BandwidthD``` - gathering by IP/host summary stats of data transferred by device by day/week/month; uses pre-existing ```/etc/config/bandwidthd``` and ```/etc/bandwidthd.conf``` setup files;
   * update (or create if does not exists) ```/etc/sysupgrade.conf``` file to presere other mentioned above setup files for future firmware upgrades (so current setup is not lost post the upgrade)
 
-(to be added soon)
-  * Modify Teltonika skin to customize it for statistics menu (copy icons and style.css)
 ## Usage
+
 Before running it please create valid inventory file - see example in ```inventory_example.ini```.
 
 Example of using specific playbook.
@@ -33,6 +34,6 @@ ansible-playbook -i my_inventory_file.ini playbooks/rutx11_setup.yml
 
 ## My future plans for playbooks (TODO)
 
-- [ ] ```rutx11_setup.yml``` - to split it into a few scripts for clean device, recreate only and divide scripts into some components for different packages - like collectd, bandwidthd, vnstat, ...
+* [ ] ```rutx11_setup.yml``` - to split it into a few scripts for clean device, recreate only and divide scripts into some components for different packages - like collectd, bandwidthd, vnstat, ...
 
 [//]: # (None at the moment)
