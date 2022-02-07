@@ -34,6 +34,10 @@ ansible-playbook -i my_inventory_file.ini playbooks/rutx11_setup.yml
 
 ## My future plans for playbooks (TODO)
 
+* [ ] add print of datetime at the begining, so the output can be stored as log with timestamp
+
+* [ ] add configuration for ClaudFlare corrected script
+
 * [ ] ```rutx11_setup.yml``` - to split it into a few scripts for clean device, recreate only and divide scripts into some components for different packages - like collectd, bandwidthd, vnstat, ...
 
 [//]: # (None at the moment)
