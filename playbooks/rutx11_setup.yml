@@ -1,7 +1,8 @@
 ---
 # Setup of RUTX11 device after firmware update (some setting dissapear)
+# Pawelo 20220514 added diffutils package installation
 # * it installs:
-# * HAProxy, iperf3, collectd + mods,
+# * HAProxy, iperf3, diffutils, collectd + mods,
 # * luci_statistics (with special exec showing GSM signal strenght and temperature, vnstat, bandwidthd
 # * vnstat, bandwidthd
 # * /etc/sysupgrade.conf (to preserve config files)
@@ -17,6 +18,8 @@
     opkg_path: "/tmp/opkg-lists"
     iperf3_package: "iperf3"
     iperf3_path: "/usr/bin/iperf3"
+    diff_package: "diffutils"
+    diff_path: "/usr/bin/diff"
     haproxy_package: "haproxy"
     haproxy_path: "/etc/init.d/haproxy"
     haproxy_enabled_path: "/etc/rc.d/S99haproxy"
@@ -84,7 +87,8 @@
       debug: msg="{{ opkg_update_status.stdout_lines }}"
       when: opkg_update_status.rc != 1
 
-    - name: Install Iperf3 (network speed testing tool)
+    # Install iperf3
+    - name: Install iperf3 (network speed testing tool)
       raw: "[[ ! -x  {{ iperf3_path }} ]] && opkg install {{ iperf3_package }}"
       register: iperf3_status
       changed_when: iperf3_status.rc == 0
@@ -92,6 +96,16 @@
     - name: Show installation status - iperf3
       debug: msg="{{ iperf3_status.stdout_lines }}"
       when: iperf3_status.rc != 1
+
+    # Install diff and diff3
+    - name: Install diff and diff3 (file and folder comparation tools)
+      raw: "[[ ! -x  {{ diff_path }} ]] && opkg install {{ diff_package }}"
+      register: diff_status
+      changed_when: diff_status.rc == 0
+      failed_when: diff_status.rc > 1
+    - name: Show installation status - diff and diff3
+      debug: msg="{{ diff_status.stdout_lines }}"
+      when: diff_status.rc != 1
 
       # Install HAProxy
     - name: Install HAProxy (TCP/HTTP load-balancer)
