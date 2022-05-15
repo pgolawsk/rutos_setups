@@ -1,6 +1,11 @@
 ---
 # Setup of RUTX11 device after firmware update (some setting dissapear)
 # Pawelo 20220514 added diffutils package installation
+# Pawelo 20220515 fix1 for opkg status = 1 when opkg failed, RC=0 - ok (no errors), RC=1 - failed (some packages are missing) - skipping/continue
+# TODO change skipping/continue to decision made by operator if we need to continue
+# Pawelo 20220515 fix2 for collectd checking if modules installed - use /usr/lib/collectd/*.so instead of usr/lib/lua/luci/statistics/plugins/*.lua
+# Pawelo 20220515 fix3 added 2>&1 to all commands to have all output displayed
+
 # * it installs:
 # * HAProxy, iperf3, diffutils, collectd + mods,
 # * luci_statistics (with special exec showing GSM signal strenght and temperature, vnstat, bandwidthd
@@ -28,8 +33,10 @@
     collectd_path: "/etc/init.d/collectd"
     collectd_enabled_path: "/etc/rc.d/S80collectd"
     collectd_config_path: "/etc/collectd.conf"
-    collectd_mod1_path: "/usr/lib/lua/luci/statistics/plugins/cpu.lua"
-    collectd_modx_path: "/usr/lib/lua/luci/statistics/plugins/df.lua"
+    collectd_mod1_path: "/usr/lib/collectd/cpu.so"
+#    collectd_mod1_path: "/usr/lib/lua/luci/statistics/plugins/cpu.lua"
+    collectd_modx_path: "/usr/lib/collectd/df.so"
+#    collectd_modx_path: "/usr/lib/lua/luci/statistics/plugins/df.lua"
     luci_statistics_package: "luci-app-statistics"
     luci_statistics_path: "/etc/init.d/luci_statistics"
     luci_statistics_enabled_path: "/etc/rc.d/S79luci_statistics"
@@ -70,7 +77,7 @@
       # If link do not exists then make a link
       raw: >
         [[ ! -L {{ data_folder }} ]] && [[ -d {{ data_path }} ]] &&
-        ln -s {{ data_path }} {{ data_folder }}
+        ln -s {{ data_path }} {{ data_folder }} 2>&1
       register: link_status
       changed_when: link_status.rc == 0
       failed_when: link_status.rc > 1
@@ -79,17 +86,17 @@
       when: link_status.rc > 1
 
     - name: Update repos for OpenWRT (OPKG update)
-      raw: "[[ ! -d {{ opkg_path }} ]] && opkg update"
+      raw: "[[ ! -d {{ opkg_path }} ]] && opkg update 2>&1"
       register: opkg_update_status
-      changed_when: opkg_update_status.rc == 0
+      changed_when: opkg_update_status.rc <= 1
       failed_when: opkg_update_status.rc > 1
-    - name: Show update status
+    - name: Show OPKG update status
       debug: msg="{{ opkg_update_status.stdout_lines }}"
-      when: opkg_update_status.rc != 1
+      # when: opkg_update_status.rc != -1
 
     # Install iperf3
     - name: Install iperf3 (network speed testing tool)
-      raw: "[[ ! -x  {{ iperf3_path }} ]] && opkg install {{ iperf3_package }}"
+      raw: "[[ ! -x  {{ iperf3_path }} ]] && opkg install {{ iperf3_package }} 2>&1"
       register: iperf3_status
       changed_when: iperf3_status.rc == 0
       failed_when: iperf3_status.rc > 1
@@ -99,7 +106,7 @@
 
     # Install diff and diff3
     - name: Install diff and diff3 (file and folder comparation tools)
-      raw: "[[ ! -x  {{ diff_path }} ]] && opkg install {{ diff_package }}"
+      raw: "[[ ! -x  {{ diff_path }} ]] && opkg install {{ diff_package }} 2>&1"
       register: diff_status
       changed_when: diff_status.rc == 0
       failed_when: diff_status.rc > 1
@@ -109,7 +116,7 @@
 
       # Install HAProxy
     - name: Install HAProxy (TCP/HTTP load-balancer)
-      raw: "[[ ! -x  {{ haproxy_path }} ]] && opkg install {{ haproxy_package }}"
+      raw: "[[ ! -x  {{ haproxy_path }} ]] && opkg install {{ haproxy_package }} 2>&1"
       register: haproxy_status
       changed_when: haproxy_status.rc == 0
       failed_when: haproxy_status.rc > 1
@@ -121,7 +128,7 @@
         sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [haproxy_config_path] }}"
 
     - name: Enable HAProxy at boot and start it
-      raw: "[[ ! -L {{ haproxy_enabled_path }} ]] && {{ haproxy_path }} enable && {{ haproxy_path }} start"
+      raw: "[[ ! -L {{ haproxy_enabled_path }} ]] && {{ haproxy_path }} enable && {{ haproxy_path }} start 2>&1"
       register: haproxy_enabled_status
       changed_when: haproxy_enabled_status.rc == 0
       failed_when: haproxy_enabled_status.rc > 1
@@ -133,7 +140,7 @@
       block:
 
       - name: Correct permissions for gsmctl to eliminate need for SUDO
-        raw: "[[ -x {{ gsmctl_path }} ]] && [[ ! -u {{ gsmctl_path }} ]] && chmod +s {{ gsmctl_path }}"
+        raw: "[[ -x {{ gsmctl_path }} ]] && [[ ! -u {{ gsmctl_path }} ]] && chmod +s {{ gsmctl_path }} 2>&1"
         register: gsmctl_status
         changed_when: gsmctl_status.rc == 0
         failed_when: gsmctl_status.rc > 1
@@ -143,7 +150,7 @@
 
       # Install CollectD and modules
       - name: Install CollectD tool
-        raw: "[[ ! -x {{ collectd_path }} ]] && opkg install {{ collectd_package }}"
+        raw: "[[ ! -x {{ collectd_path }} ]] && opkg install {{ collectd_package }} 2>&1"
         register: collectd_status
         changed_when: collectd_status.rc == 0
         failed_when: collectd_status.rc > 1
@@ -166,6 +173,7 @@
           collectd-mod-wireless
           collectd-mod-iwinfo
           collectd-mod-load
+          2>&1
         register: collectd_mod1_status
         changed_when: collectd_mod1_status.rc == 0
         failed_when: collectd_mod1_status.rc > 1
@@ -197,6 +205,7 @@
           collectd-mod-logfile
           collectd-mod-syslog
           collectd-mod-network
+          2>&1
         register: collectd_modx_status
         changed_when: collectd_modx_status.rc == 0
         failed_when: collectd_modx_status.rc > 1
@@ -226,7 +235,7 @@
         when: lua_status.rc == 0
 
       - name: Enable CollectD at boot and start it
-        raw: "[[ ! -L {{ collectd_enabled_path }} ]] && {{ collectd_path }} enable && {{ collectd_path }} start"
+        raw: "[[ ! -L {{ collectd_enabled_path }} ]] && {{ collectd_path }} enable && {{ collectd_path }} start 2>&1"
         register: collectd_enabled_status
         changed_when: collectd_enabled_status.rc == 0
         failed_when: collectd_enabled_status.rc > 1
@@ -236,7 +245,7 @@
 
       # Install LUCI Statistics
       - name: Install LUCI Statistics (CollectD tool web interface)
-        raw: "[[ ! -x {{ luci_statistics_path }} ]] && opkg install --nodeps {{ luci_statistics_package }}"
+        raw: "[[ ! -x {{ luci_statistics_path }} ]] && opkg install --nodeps {{ luci_statistics_package }} 2>&1"
         register: luci_statistics_status
         changed_when: luci_statistics_status.rc == 0
         failed_when: luci_statistics_status.rc > 1
@@ -246,7 +255,7 @@
 
       # TODO: Modify Teltonika skin to customize for statistics menu (copy icons and style.css)
       - name: Enable LUCI Statistics at boot and start it
-        raw: "[[ ! -L {{ luci_statistics_enabled_path }} ]] && {{ luci_statistics_path }} enable && {{ luci_statistics_path }} start"
+        raw: "[[ ! -L {{ luci_statistics_enabled_path }} ]] && {{ luci_statistics_path }} enable && {{ luci_statistics_path }} start 2>&1"
         register: luci_statistics_enabled_status
         changed_when: luci_statistics_enabled_status.rc == 0
         failed_when: luci_statistics_enabled_status.rc > 1
@@ -256,7 +265,7 @@
 
       # Install VNStat
       - name: Install VNStat (collecting/monitoring GSM/LTE data plan)
-        raw: "[[ ! -x {{ vnstat_path }} ]] && opkg install --nodeps {{ vnstat_package }}"
+        raw: "[[ ! -x {{ vnstat_path }} ]] && opkg install --nodeps {{ vnstat_package }} 2>&1"
         register: vnstat_status
         changed_when: vnstat_status.rc == 0
         failed_when: vnstat_status.rc > 1
@@ -269,7 +278,7 @@
 
 
       - name: Enable VNStat at boot and start it
-        raw: "[[ ! -L {{ vnstat_enabled_path }} ]] && {{ vnstat_path }} enable && {{ vnstat_path }} start"
+        raw: "[[ ! -L {{ vnstat_enabled_path }} ]] && {{ vnstat_path }} enable && {{ vnstat_path }} start 2>&1"
         register: vnstat_enabled_status
         changed_when: vnstat_enabled_status.rc == 0
         failed_when: vnstat_enabled_status.rc > 1
@@ -279,7 +288,7 @@
 
       # Install BandwidthD
       - name: Install BandwidthD (collecting/monitoring summary of traffic data by IP daily/weekly/monthly/yearly)
-        raw: "[[ ! -x {{ bandwidthd_path }} ]] && opkg install {{ bandwidthd_package }}"
+        raw: "[[ ! -x {{ bandwidthd_path }} ]] && opkg install --nodeps {{ bandwidthd_package }} 2>&1"
         register: bandwidthd_status
         changed_when: bandwidthd_status.rc == 0
         failed_when: bandwidthd_status.rc > 1
@@ -291,7 +300,7 @@
           sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [bandwidthd_config_path] }}"
 
       - name: Enable BandwidthD at boot and start it
-        raw: "[[ ! -L {{ bandwidthd_enabled_path }} ]] && {{ bandwidthd_path }} enable && {{ bandwidthd_path }} start"
+        raw: "[[ ! -L {{ bandwidthd_enabled_path }} ]] && {{ bandwidthd_path }} enable && {{ bandwidthd_path }} start 2>&1"
         register: bandwidthd_enabled_status
         changed_when: bandwidthd_enabled_status.rc == 0
         failed_when: bandwidthd_enabled_status.rc > 1
@@ -303,7 +312,7 @@
       block:
 
       - name: Set timestamp for backup files
-        raw: "date +'%Y-%m-%d_%H%M%S'"
+        raw: "date +'%Y-%m-%d_%H%M%S' 2>&1"
         register: backup_file_timestamp
         changed_when: false
         failed_when: false
@@ -323,7 +332,7 @@
         failed_when: sysupgrade_blank_status.rc > 1
 
       - name: Make backup of {{ sysupgrade_config_path }}
-        raw: "[[ -f {{ sysupgrade_config_path }} ]] && cp {{ sysupgrade_config_path }} {{ sysupgrade_config_path }}{{ backup_file_timestamp }}"
+        raw: "[[ -f {{ sysupgrade_config_path }} ]] && cp {{ sysupgrade_config_path }} {{ sysupgrade_config_path }}{{ backup_file_timestamp }} 2>&1"
         register: sysupgrade_backup_status
         changed_when: false
         failed_when: sysupgrade_backup_status.rc > 1
@@ -332,6 +341,7 @@
         raw: >
           [[ -L {{ item  }} ]] &&
           readlink -n {{ item }}
+          2>&1
         register: sysupgrade_config_preserve_links
         changed_when: false
         failed_when: sysupgrade_config_preserve_links.rc > 1
@@ -350,6 +360,7 @@
           [[ -f {{ sysupgrade_config_path }} ]] &&
           ! grep -q '^{{ item }}$' {{ sysupgrade_config_path }} &&
           echo '{{ item }}' >> {{ sysupgrade_config_path }}
+          2>&1
         register: sysupgrade_preserve_status
         changed_when: sysupgrade_preserve_status.rc == 0
         failed_when: sysupgrade_preserve_status.rc > 1
@@ -365,6 +376,7 @@
           [[ -f {{ sysupgrade_config_path }}{{ backup_file_timestamp }} ]] &&
           cmp -s {{ sysupgrade_config_path }} {{ sysupgrade_config_path }}{{ backup_file_timestamp }} &&
           rm {{ sysupgrade_config_path }}{{ backup_file_timestamp }}
+          2>&1
         register: sysupgrade_backup_remove_status
         changed_when: sysupgrade_backup_remove_status.rc == 1
         failed_when: sysupgrade_backup_remove_status.rc > 1
