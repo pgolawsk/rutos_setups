@@ -67,7 +67,7 @@
 
   tasks:
     - name: Show the device details
-      raw: uname -a
+      raw: uname -a 2>&1
       changed_when: false
       register: conn_status
     - name: Show the device details - debug
