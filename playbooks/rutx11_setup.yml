@@ -5,6 +5,10 @@
 # TODO change skipping/continue to decision made by operator if we need to continue
 # Pawelo 20220515 fix2 for collectd checking if modules installed - use /usr/lib/collectd/*.so instead of usr/lib/lua/luci/statistics/plugins/*.lua
 # Pawelo 20220515 fix3 added 2>&1 to all commands to have all output displayed
+# Pawelo 20220704 fix4 added to display stderr_lines to all commands to have all output displayed
+# Pawelo 20221112 fix5 added to display RC to all commands to have all output displayed
+# TODO -fix bug - RC is recognized as connection failue, thus need to change it to >>> ; awk -vrc=$? 'BEGIN{print "rc="rc}' <<< 
+# as per https://stackoverflow.com/questions/64285968/ansible-ssh-connection-drops-fails-for-one-of-the-task-while-works-for-other-t
 
 # * it installs:
 # * HAProxy, iperf3, diffutils, collectd + mods,
@@ -82,16 +86,16 @@
       changed_when: link_status.rc == 0
       failed_when: link_status.rc > 1
     - name: Link {{ data_folder }} as {{ data_path }} - debug
-      debug: msg="{{ link_status.stdout_lines }}"
+      debug: msg="{{ link_status.stdout_lines }} +++ RC {{ link_status.rc }} +++ ERR {{ link_status.stderr_lines }}"
       when: link_status.rc > 1
 
     - name: Update repos for OpenWRT (OPKG update)
       raw: "[[ ! -d {{ opkg_path }} ]] && opkg update 2>&1"
       register: opkg_update_status
-      changed_when: opkg_update_status.rc <= 1
+      changed_when: opkg_update_status.rc == 0
       failed_when: opkg_update_status.rc > 1
     - name: Show OPKG update status
-      debug: msg="{{ opkg_update_status.stdout_lines }}"
+      debug: msg="{{ opkg_update_status.stdout_lines }} +++ RC {{ opkg_update_status.rc }} +++ ERR {{ opkg_update_status.stderr_lines }}"
       # when: opkg_update_status.rc != -1
 
     # Install iperf3
@@ -101,7 +105,7 @@
       changed_when: iperf3_status.rc == 0
       failed_when: iperf3_status.rc > 1
     - name: Show installation status - iperf3
-      debug: msg="{{ iperf3_status.stdout_lines }}"
+      debug: msg="{{ iperf3_status.stdout_lines }} +++ RC {{ iperf3_status.rc }} +++ ERR {{ iperf3_status.stderr_lines }}"
       when: iperf3_status.rc != 1
 
     # Install diff and diff3
@@ -111,7 +115,7 @@
       changed_when: diff_status.rc == 0
       failed_when: diff_status.rc > 1
     - name: Show installation status - diff and diff3
-      debug: msg="{{ diff_status.stdout_lines }}"
+      debug: msg="{{ diff_status.stdout_lines }} +++ RC {{ diff_status.rc }} +++ ERR {{ diff_status.stderr_lines }}"
       when: diff_status.rc != 1
 
       # Install HAProxy
@@ -121,7 +125,7 @@
       changed_when: haproxy_status.rc == 0
       failed_when: haproxy_status.rc > 1
     - name: Show installation status - HAProxy
-      debug: msg="{{ haproxy_status.stdout_lines }}"
+      debug: msg="{{ haproxy_status.stdout_lines }} +++ RC {{ haproxy_status.rc }} +++ ERR {{ haproxy_status.stderr_lines }}"
       when: haproxy_status.rc != 1
     - name: Set {{ haproxy_config_path }} on paths to preserve next restore/upgrade
       set_fact:
@@ -133,7 +137,7 @@
       changed_when: haproxy_enabled_status.rc == 0
       failed_when: haproxy_enabled_status.rc > 1
     - name: Show installation status - HAProxy start and enable at start
-      debug: msg="{{ haproxy_enabled_status.stdout_lines }}"
+      debug: msg="{{ haproxy_enabled_status.stdout_lines }} +++ RC {{ haproxy_enabled_status.rc }} +++ ERR {{ haproxy_enabled_status.stderr_lines }}"
       when: haproxy_enabled_status.rc != 1
 
     - name: "*** Install statistics"
@@ -145,7 +149,7 @@
         changed_when: gsmctl_status.rc == 0
         failed_when: gsmctl_status.rc > 1
       - name: Show gsmctl set permission status
-        debug: msg="{{ gsmctl_status.stdout_lines }}"
+        debug: msg="{{ gsmctl_status.stdout_lines }} +++ RC {{ gsmctl_status.rc }} +++ ERR {{ gsmctl_status.stderr_lines }}"
         when: gsmctl_status.rc > 1
 
       # Install CollectD and modules
@@ -155,7 +159,7 @@
         changed_when: collectd_status.rc == 0
         failed_when: collectd_status.rc > 1
       - name: Show installation status - CollectD
-        debug: msg="{{ collectd_status.stdout_lines }}"
+        debug: msg="{{ collectd_status.stdout_lines }} +++ RC {{ collectd_status.rc }} +++ ERR {{ collectd_status.stderr_lines }}"
         when: collectd_status.rc != 1
       - name: Set {{ collectd_config_path }} on paths to preserve next restore/upgrade
         set_fact:
@@ -178,7 +182,7 @@
         changed_when: collectd_mod1_status.rc == 0
         failed_when: collectd_mod1_status.rc > 1
       - name: Show installation status - CollectD basic modules
-        debug: msg="{{ collectd_mod1_status.stdout_lines }}"
+        debug: msg="{{ collectd_mod1_status.stdout_lines }} +++ RC {{ collectd_mod1_status.rc }} +++ ERR {{ collectd_mod1_status.stderr_lines }}"
         when: collectd_mod1_status.rc != 1
 
       - name: Install CollectD extended modules (csv, df, exec, ...)
@@ -210,7 +214,7 @@
         changed_when: collectd_modx_status.rc == 0
         failed_when: collectd_modx_status.rc > 1
       - name: Show installation status - CollectD extended modules
-        debug: msg="{{ collectd_modx_status.stdout_lines }}"
+        debug: msg="{{ collectd_modx_status.stdout_lines }} +++ RC {{ collectd_modx_status.rc }} +++ ERR {{ collectd_modx_status.stderr_lines }}"
         when: collectd_modx_status.rc != 1
 
       # Install EXEC module
@@ -240,7 +244,7 @@
         changed_when: collectd_enabled_status.rc == 0
         failed_when: collectd_enabled_status.rc > 1
       - name: Show installation status - CollectD start and enable at start
-        debug: msg="{{ collectd_enabled_status.stdout_lines }}"
+        debug: msg="{{ collectd_enabled_status.stdout_lines }} +++ RC {{ collectd_enabled_status.rc }} +++ ERR {{ collectd_enabled_status.stderr_lines }}"
         when: collectd_enabled_status.rc != 1
 
       # Install LUCI Statistics
@@ -250,7 +254,7 @@
         changed_when: luci_statistics_status.rc == 0
         failed_when: luci_statistics_status.rc > 1
       - name: Show installation status - LUCI Statistics
-        debug: msg="{{ luci_statistics_status.stdout_lines }}"
+        debug: msg="{{ luci_statistics_status.stdout_lines }} +++ RC {{ luci_statistics_status.rc }} +++ ERR {{ luci_statistics_status.stderr_lines }}"
         when: luci_statistics_status.rc != 1
 
       # TODO: Modify Teltonika skin to customize for statistics menu (copy icons and style.css)
@@ -260,17 +264,17 @@
         changed_when: luci_statistics_enabled_status.rc == 0
         failed_when: luci_statistics_enabled_status.rc > 1
       - name: Show installation status - LUCI Statistics start and enable at start
-        debug: msg="{{ luci_statistics_enabled_status.stdout_lines }}"
+        debug: msg="{{ luci_statistics_enabled_status.stdout_lines }} +++ RC {{ luci_statistics_enabled_status.rc }} +++ ERR {{ luci_statistics_enabled_status.stderr_lines }}"
         when: luci_statistics_enabled_status.rc != 1
 
       # Install VNStat
       - name: Install VNStat (collecting/monitoring GSM/LTE data plan)
-        raw: "[[ ! -x {{ vnstat_path }} ]] && opkg install --nodeps {{ vnstat_package }} 2>&1"
+        raw: "[[ ! -x {{ vnstat_path }} ]] && opkg install {{ vnstat_package }} 2>&1"
         register: vnstat_status
         changed_when: vnstat_status.rc == 0
         failed_when: vnstat_status.rc > 1
       - name: Show installation status - VNStat
-        debug: msg="{{ vnstat_status.stdout_lines }}"
+        debug: msg="{{ vnstat_status.stdout_lines }} +++ RC {{ vnstat_status.rc }} +++ ERR {{ vnstat_status.stderr_lines }}"
         when: vnstat_status.rc != 1
       - name: Set {{ vnstat_config_path }} on paths to preserve next restore/upgrade
         set_fact:
@@ -283,17 +287,17 @@
         changed_when: vnstat_enabled_status.rc == 0
         failed_when: vnstat_enabled_status.rc > 1
       - name: Show installation status - VNStat start and enable at start
-        debug: msg="{{ vnstat_enabled_status.stdout_lines }}"
+        debug: msg="{{ vnstat_enabled_status.stdout_lines }} +++ RC {{ vnstat_enabled_status.rc }} +++ ERR {{ vnstat_enabled_status.stderr_lines }}"
         when: vnstat_enabled_status.rc != 1
 
       # Install BandwidthD
       - name: Install BandwidthD (collecting/monitoring summary of traffic data by IP daily/weekly/monthly/yearly)
-        raw: "[[ ! -x {{ bandwidthd_path }} ]] && opkg install --nodeps {{ bandwidthd_package }} 2>&1"
+        raw: "[[ ! -x {{ bandwidthd_path }} ]] && opkg --nodeps install {{ bandwidthd_package }} 2>&1"
         register: bandwidthd_status
         changed_when: bandwidthd_status.rc == 0
         failed_when: bandwidthd_status.rc > 1
       - name: Show installation status - BandwidthD
-        debug: msg="{{ bandwidthd_status.stdout_lines }}"
+        debug: msg="{{ bandwidthd_status.stdout_lines }} +++ RC {{ bandwidthd_status.rc }} +++ ERR {{ bandwidthd_status.stderr_lines }}"
         when: bandwidthd_status.rc != 1
       - name: Set {{ bandwidthd_config_path }} on paths to preserve next restore/upgrade
         set_fact:
@@ -305,7 +309,7 @@
         changed_when: bandwidthd_enabled_status.rc == 0
         failed_when: bandwidthd_enabled_status.rc > 1
       - name: Show installation status - BandwidthD start and enable at start
-        debug: msg="{{ bandwidthd_enabled_status.stdout_lines }}"
+        debug: msg="{{ bandwidthd_enabled_status.stdout_lines }} +++ RC {{ bandwidthd_enabled_status.rc }} +++ ERR {{ banwidthd_enabled_status.stderr_lines }}"
         when: bandwidthd_enabled_status.rc != 1
 
     - name: Ensure list of files is preserved for next upgrades
