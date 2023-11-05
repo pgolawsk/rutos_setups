@@ -10,6 +10,7 @@ This repository contains Ansible scripts for RutOS devices to recreate setup on 
 
 * ```playbooks/rutx11_setup.yml``` - this is recreate setup script after firmware update. It re-installs:
   * ```iperf3``` - network speed testing tool;
+  * ```htop``` - cpu/mem cli monitoring tool;
   * ```diff``` and ```diff3``` - diffutils package to compare files and folders;
   * ```HAProxy``` - loadbalancer for network services; uses pre-existing ```/etc/haproxy.cfg``` setup file;
   * ```VNStat``` - gathering summary data total transfered data by interface by day/month, ... (to monitor use of GSM/LTE data plans); uses pre-existing ```/etc/vnstat.conf``` setup files; use command line tool ```vnstat``` to display data;
