@@ -11,10 +11,12 @@
 # as per https://stackoverflow.com/questions/64285968/ansible-ssh-connection-drops-fails-for-one-of-the-task-while-works-for-other-t
 # Pawelo 20221229 added install of collecd-mod-thermal
 # Pawelo 20230115 disabled luci-app-statistics as it override collectd.conf file each boot
+# Pawelo 20231105 disabled luci packages
+# Pawelo 20231105 added htop install
 
 # * it installs:
-# * HAProxy, iperf3, diffutils, collectd + mods,
-# * luci_statistics (with special exec showing GSM signal strenght and temperature, vnstat, bandwidthd
+# * HAProxy, iperf3, diffutils, htop, collectd + mods,
+#! * luci_statistics (with special exec showing GSM signal strenght and temperature, vnstat, bandwidthd
 # * vnstat, bandwidthd
 # * /etc/sysupgrade.conf (to preserve config files)
 
@@ -29,6 +31,8 @@
     opkg_path: "/tmp/opkg-lists"
     iperf3_package: "iperf3"
     iperf3_path: "/usr/bin/iperf3"
+    htop_package: "htop"
+    htop_path: "/usr/bin/htop"
     diff_package: "diffutils"
     diff_path: "/usr/bin/diff"
     haproxy_package: "haproxy"
@@ -47,7 +51,7 @@
     luci_statistics_path: "/etc/init.d/luci_statistics"
     luci_statistics_enabled_path: "/etc/rc.d/S79luci_statistics"
     # ? luci_statistics_config_path in /etc/config and backed out automatically
-    vnstat_package: "vnstat luci-app-vnstat"
+    vnstat_package: "vnstat"
     vnstat_path: "/etc/init.d/vnstat"
     vnstat_config_path: "/etc/vnstat.conf"
     vnstat_data_path: "/mnt/sda1/vnstat"  # ! not used
@@ -119,6 +123,16 @@
     - name: Show installation status - diff and diff3
       debug: msg="{{ diff_status.stdout_lines }} +++ RC {{ diff_status.rc }} +++ ERR {{ diff_status.stderr_lines }}"
       when: diff_status.rc != 1
+
+    # Install htop
+    - name: Install htop (cpu/mem cli online monitoring)
+      raw: "[[ ! -x  {{ htop_path }} ]] && opkg install {{ htop_package }} 2>&1"
+      register: htop_status
+      changed_when: htop_status.rc == 0
+      failed_when: htop_status.rc > 1
+    - name: Show installation status - HTOP
+      debug: msg="{{ htop_status.stdout_lines }} +++ RC {{ htop_status.rc }} +++ ERR {{ htop_status.stderr_lines }}"
+      when: htop_status.rc != 1
 
       # Install HAProxy
     - name: Install HAProxy (TCP/HTTP load-balancer)
@@ -232,15 +246,15 @@
           sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [gsmkpi_path] }}"
         when: gsmkpi_status.rc == 0
 
-      - name: Check if {{ luci_statistics_exec_lua_path }} script exists
-        raw: "[[ -f {{ luci_statistics_exec_lua_path }} ]]"
-        register: lua_status
-        changed_when: false
-        failed_when: lua_status.rc > 1
-      - name: Set {{ luci_statistics_exec_lua_path }} on paths to preserve next restore/upgrade
-        set_fact:
-          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [luci_statistics_exec_lua_path] }}"
-        when: lua_status.rc == 0
+      # - name: Check if {{ luci_statistics_exec_lua_path }} script exists
+      #   raw: "[[ -f {{ luci_statistics_exec_lua_path }} ]]"
+      #   register: lua_status
+      #   changed_when: false
+      #   failed_when: lua_status.rc > 1
+      # - name: Set {{ luci_statistics_exec_lua_path }} on paths to preserve next restore/upgrade
+      #   set_fact:
+      #     sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [luci_statistics_exec_lua_path] }}"
+      #   when: lua_status.rc == 0
 
       - name: Enable CollectD at boot and start it
         raw: "[[ ! -L {{ collectd_enabled_path }} ]] && {{ collectd_path }} enable && {{ collectd_path }} start 2>&1"
@@ -262,14 +276,14 @@
 #        when: luci_statistics_status.rc != 1
 
       # TODO: Modify Teltonika skin to customize for statistics menu (copy icons and style.css)
-      - name: Enable LUCI Statistics at boot and start it
-        raw: "[[ ! -L {{ luci_statistics_enabled_path }} ]] && {{ luci_statistics_path }} enable && {{ luci_statistics_path }} start 2>&1"
-        register: luci_statistics_enabled_status
-        changed_when: luci_statistics_enabled_status.rc == 0
-        failed_when: luci_statistics_enabled_status.rc > 1
-      - name: Show installation status - LUCI Statistics start and enable at start
-        debug: msg="{{ luci_statistics_enabled_status.stdout_lines }} +++ RC {{ luci_statistics_enabled_status.rc }} +++ ERR {{ luci_statistics_enabled_status.stderr_lines }}"
-        when: luci_statistics_enabled_status.rc != 1
+#      - name: Enable LUCI Statistics at boot and start it
+#        raw: "[[ ! -L {{ luci_statistics_enabled_path }} ]] && {{ luci_statistics_path }} enable && {{ luci_statistics_path }} start 2>&1"
+#        register: luci_statistics_enabled_status
+#        changed_when: luci_statistics_enabled_status.rc == 0
+#        failed_when: luci_statistics_enabled_status.rc > 1
+#      - name: Show installation status - LUCI Statistics start and enable at start
+#        debug: msg="{{ luci_statistics_enabled_status.stdout_lines }} +++ RC {{ luci_statistics_enabled_status.rc }} +++ ERR {{ luci_statistics_enabled_status.stderr_lines }}"
+#        when: luci_statistics_enabled_status.rc != 1
 
       # Install VNStat
       - name: Install VNStat (collecting/monitoring GSM/LTE data plan)
