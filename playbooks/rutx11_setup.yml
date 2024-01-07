@@ -13,9 +13,10 @@
 # Pawelo 20230115 disabled luci-app-statistics as it override collectd.conf file each boot
 # Pawelo 20231105 disabled luci packages
 # Pawelo 20231105 added htop install
+# Pawelo 20240105 added telegraf install
 
 # * it installs:
-# * HAProxy, iperf3, diffutils, htop, collectd + mods,
+# * HAProxy, iperf3, diffutils, htop, collectd + mods, telegraf
 #! * luci_statistics (with special exec showing GSM signal strenght and temperature, vnstat, bandwidthd
 # * vnstat, bandwidthd
 # * /etc/sysupgrade.conf (to preserve config files)
@@ -39,6 +40,10 @@
     haproxy_path: "/etc/init.d/haproxy"
     haproxy_enabled_path: "/etc/rc.d/S99haproxy"
     haproxy_config_path: "/etc/haproxy.conf"
+    telegraf_package: "telegraf"
+    telegraf_path: "/etc/init.d/telegraf"
+    telegraf_enabled_path: "/etc/rc.d/S95telegraf"
+    telegraf_config_path: "/etc/telegraf.conf"
     collectd_package: "collectd"
     collectd_path: "/etc/init.d/collectd"
     collectd_enabled_path: "/etc/rc.d/S80collectd"
@@ -74,6 +79,9 @@
     sysupgrade_config_preserve_paths:
       - "/etc/sudoers"
       - "/etc/dropbear/authorized_keys"
+      - "/etc/collectd_gsm_temp_signal.sh"              
+      - "/usr/share/collectd/types.db"
+      - "/usr/lib/ddns/update_cloudflare_com_v4.sh"
 
   tasks:
     - name: Show the device details
@@ -134,7 +142,7 @@
       debug: msg="{{ htop_status.stdout_lines }} +++ RC {{ htop_status.rc }} +++ ERR {{ htop_status.stderr_lines }}"
       when: htop_status.rc != 1
 
-      # Install HAProxy
+    # Install HAProxy
     - name: Install HAProxy (TCP/HTTP load-balancer)
       raw: "[[ ! -x  {{ haproxy_path }} ]] && opkg install {{ haproxy_package }} 2>&1"
       register: haproxy_status
@@ -156,7 +164,8 @@
       debug: msg="{{ haproxy_enabled_status.stdout_lines }} +++ RC {{ haproxy_enabled_status.rc }} +++ ERR {{ haproxy_enabled_status.stderr_lines }}"
       when: haproxy_enabled_status.rc != 1
 
-    - name: "*** Install statistics"
+    # Make gsmctl accesible by non-root user
+    - name: "*** Make gsmctl accesible by non-root user"
       block:
 
       - name: Correct permissions for gsmctl to eliminate need for SUDO
@@ -167,6 +176,28 @@
       - name: Show gsmctl set permission status
         debug: msg="{{ gsmctl_status.stdout_lines }} +++ RC {{ gsmctl_status.rc }} +++ ERR {{ gsmctl_status.stderr_lines }}"
         when: gsmctl_status.rc > 1
+
+     # Install Telegraf (feeding to InfluxDB)
+    - name: Install Telegraf (feeding data to InfluxDB)
+      raw: "[[ ! -x  {{ telegraf_path }} ]] && opkg install {{ telegraf_package }} 2>&1"
+      register: telegraf_status
+      changed_when: telegraf_status.rc == 0
+      failed_when: telegraf_status.rc > 1
+    - name: Show installation status - Telegraf
+      debug: msg="{{ telegraf_status.stdout_lines }} +++ RC {{ telegraf_status.rc }} +++ ERR {{ telegraf_status.stderr_lines }}"
+      when: telegraf_status.rc != 1
+    - name: Set {{ telegraf_config_path }} on paths to preserve next restore/upgrade
+      set_fact:
+        sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [telegraf_config_path] }}"
+
+    - name: Enable Telegraf at boot and start it
+      raw: "[[ ! -L {{ telegraf_enabled_path }} ]] && {{ telegraf_path }} enable && {{ telegraf_path }} start 2>&1"
+      register: telegraf_enabled_status
+      changed_when: telegraf_enabled_status.rc == 0
+      failed_when: telegraf_enabled_status.rc > 1
+    - name: Show installation status - Telegraf start and enable at start
+      debug: msg="{{ telegraf_enabled_status.stdout_lines }} +++ RC {{ telegraf_enabled_status.rc }} +++ ERR {{ telegraf_enabled_status.stderr_lines }}"
+      when: telegraf_enabled_status.rc != 1
 
       # Install CollectD and modules
       - name: Install CollectD tool
