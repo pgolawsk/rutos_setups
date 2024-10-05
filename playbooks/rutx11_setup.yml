@@ -14,6 +14,9 @@
 # Pawelo 20231105 disabled luci packages
 # Pawelo 20231105 added htop install
 # Pawelo 20240105 added telegraf install
+# Pawelo 20241006 fixed comments block (script was not runnable)
+# Pawelo 20241006 fix for opkg openwrt folder with distfeeds.conf
+
 
 # * it installs:
 # * HAProxy, iperf3, diffutils, htop, collectd + mods, telegraf
@@ -30,6 +33,7 @@
     data_folder: "/data"
     data_path: "/mnt/sda1"
     opkg_path: "/tmp/opkg-lists"
+    opkg_openwrt_distfeeds: "/etc/opkg/openwrt/distfeeds.conf"
     iperf3_package: "iperf3"
     iperf3_path: "/usr/bin/iperf3"
     htop_package: "htop"
@@ -103,7 +107,7 @@
       debug: msg="{{ link_status.stdout_lines }} +++ RC {{ link_status.rc }} +++ ERR {{ link_status.stderr_lines }}"
       when: link_status.rc > 1
 
-    - name: Update repos for OpenWRT (OPKG update)
+    - name: Update repos for Teltonika (OPKG update)
       raw: "[[ ! -d {{ opkg_path }} ]] && opkg update 2>&1"
       register: opkg_update_status
       changed_when: opkg_update_status.rc == 0
@@ -111,6 +115,13 @@
     - name: Show OPKG update status
       debug: msg="{{ opkg_update_status.stdout_lines }} +++ RC {{ opkg_update_status.rc }} +++ ERR {{ opkg_update_status.stderr_lines }}"
       # when: opkg_update_status.rc != -1
+    - name: Update repos for OpenWRT (OPKG -e <> update)
+      raw: "[[ ! -d {{ opkg_path }} ]] && opkg -e {{ opkg_openwrt_distfeeds }} update 2>&1"
+      register: opkg_update2_status
+      changed_when: opkg_update_status.rc >= 0
+      # failed_when: opkg_update_status.rc > 1
+    - name: Show OPKG update status
+      debug: msg="{{ opkg_update_status.stdout_lines }} +++ RC {{ opkg_update2_status.rc }} +++ ERR {{ opkg_update2_status.stderr_lines }}"
 
     # Install iperf3
     - name: Install iperf3 (network speed testing tool)
@@ -124,7 +135,7 @@
 
     # Install diff and diff3
     - name: Install diff and diff3 (file and folder compare tools)
-      raw: "[[ ! -x  {{ diff_path }} ]] && opkg install {{ diff_package }} 2>&1"
+      raw: "[[ ! -x  {{ diff_path }} ]] && opkg -e {{ opkg_openwrt_distfeeds }} install {{ diff_package }} 2>&1"
       register: diff_status
       changed_when: diff_status.rc == 0
       failed_when: diff_status.rc > 1
@@ -134,7 +145,7 @@
 
     # Install htop
     - name: Install htop (cpu/mem cli online monitoring)
-      raw: "[[ ! -x  {{ htop_path }} ]] && opkg install {{ htop_package }} 2>&1"
+      raw: "[[ ! -x  {{ htop_path }} ]] && opkg -e {{ opkg_openwrt_distfeeds }} install {{ htop_package }} 2>&1"
       register: htop_status
       changed_when: htop_status.rc == 0
       failed_when: htop_status.rc > 1
