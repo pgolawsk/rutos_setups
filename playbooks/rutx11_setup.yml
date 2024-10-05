@@ -79,7 +79,7 @@
     sysupgrade_config_preserve_paths:
       - "/etc/sudoers"
       - "/etc/dropbear/authorized_keys"
-      - "/etc/collectd_gsm_temp_signal.sh"              
+      - "/etc/collectd_gsm_temp_signal.sh"
       - "/usr/share/collectd/types.db"
       - "/usr/lib/ddns/update_cloudflare_com_v4.sh"
 
@@ -123,7 +123,7 @@
       when: iperf3_status.rc != 1
 
     # Install diff and diff3
-    - name: Install diff and diff3 (file and folder comparation tools)
+    - name: Install diff and diff3 (file and folder compare tools)
       raw: "[[ ! -x  {{ diff_path }} ]] && opkg install {{ diff_package }} 2>&1"
       register: diff_status
       changed_when: diff_status.rc == 0
@@ -164,8 +164,8 @@
       debug: msg="{{ haproxy_enabled_status.stdout_lines }} +++ RC {{ haproxy_enabled_status.rc }} +++ ERR {{ haproxy_enabled_status.stderr_lines }}"
       when: haproxy_enabled_status.rc != 1
 
-    # Make gsmctl accesible by non-root user
-    - name: "*** Make gsmctl accesible by non-root user"
+    # Make gsmctl accessible by non-root user
+    - name: "*** Make gsmctl accessible by non-root user"
       block:
 
       - name: Correct permissions for gsmctl to eliminate need for SUDO
@@ -177,7 +177,7 @@
         debug: msg="{{ gsmctl_status.stdout_lines }} +++ RC {{ gsmctl_status.rc }} +++ ERR {{ gsmctl_status.stderr_lines }}"
         when: gsmctl_status.rc > 1
 
-     # Install Telegraf (feeding to InfluxDB)
+    # Install Telegraf (feeding to InfluxDB)
     - name: Install Telegraf (feeding data to InfluxDB)
       raw: "[[ ! -x  {{ telegraf_path }} ]] && opkg install {{ telegraf_package }} 2>&1"
       register: telegraf_status
@@ -199,102 +199,102 @@
       debug: msg="{{ telegraf_enabled_status.stdout_lines }} +++ RC {{ telegraf_enabled_status.rc }} +++ ERR {{ telegraf_enabled_status.stderr_lines }}"
       when: telegraf_enabled_status.rc != 1
 
-      # Install CollectD and modules
-      - name: Install CollectD tool
-        raw: "[[ ! -x {{ collectd_path }} ]] && opkg install {{ collectd_package }} 2>&1"
-        register: collectd_status
-        changed_when: collectd_status.rc == 0
-        failed_when: collectd_status.rc > 1
-      - name: Show installation status - CollectD
-        debug: msg="{{ collectd_status.stdout_lines }} +++ RC {{ collectd_status.rc }} +++ ERR {{ collectd_status.stderr_lines }}"
-        when: collectd_status.rc != 1
-      - name: Set {{ collectd_config_path }} on paths to preserve next restore/upgrade
-        set_fact:
-          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [collectd_config_path] }}"
+    # Install CollectD and modules
+    - name: Install CollectD tool
+      raw: "[[ ! -x {{ collectd_path }} ]] && opkg install {{ collectd_package }} 2>&1"
+      register: collectd_status
+      changed_when: collectd_status.rc == 0
+      failed_when: collectd_status.rc > 1
+    - name: Show installation status - CollectD
+      debug: msg="{{ collectd_status.stdout_lines }} +++ RC {{ collectd_status.rc }} +++ ERR {{ collectd_status.stderr_lines }}"
+      when: collectd_status.rc != 1
+    - name: Set {{ collectd_config_path }} on paths to preserve next restore/upgrade
+      set_fact:
+        sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [collectd_config_path] }}"
 
-      - name: Install CollectD basic modules (cpu, memory, rrdtool, ...)
-        raw: >
-          [[ ! -f {{ collectd_mod1_path }} ]] &&
-          opkg install
-          collectd-mod-cpu
-          collectd-mod-interface
-          collectd-mod-memory
-          collectd-mod-ping
-          collectd-mod-rrdtool
-          collectd-mod-wireless
-          collectd-mod-iwinfo
-          collectd-mod-load
-          2>&1
-        register: collectd_mod1_status
-        changed_when: collectd_mod1_status.rc == 0
-        failed_when: collectd_mod1_status.rc > 1
-      - name: Show installation status - CollectD basic modules
-        debug: msg="{{ collectd_mod1_status.stdout_lines }} +++ RC {{ collectd_mod1_status.rc }} +++ ERR {{ collectd_mod1_status.stderr_lines }}"
-        when: collectd_mod1_status.rc != 1
+    - name: Install CollectD basic modules (cpu, memory, rrdtool, ...)
+      raw: >
+        [[ ! -f {{ collectd_mod1_path }} ]] &&
+        opkg install
+        collectd-mod-cpu
+        collectd-mod-interface
+        collectd-mod-memory
+        collectd-mod-ping
+        collectd-mod-rrdtool
+        collectd-mod-wireless
+        collectd-mod-iwinfo
+        collectd-mod-load
+        2>&1
+      register: collectd_mod1_status
+      changed_when: collectd_mod1_status.rc == 0
+      failed_when: collectd_mod1_status.rc > 1
+    - name: Show installation status - CollectD basic modules
+      debug: msg="{{ collectd_mod1_status.stdout_lines }} +++ RC {{ collectd_mod1_status.rc }} +++ ERR {{ collectd_mod1_status.stderr_lines }}"
+      when: collectd_mod1_status.rc != 1
 
-      - name: Install CollectD extended modules (csv, df, exec, ...)
-        raw: >
-          [[ ! -f {{ collectd_modx_path }} ]] &&
-          opkg install
-          collectd-mod-swap
-          collectd-mod-csv
-          collectd-mod-curl
-          collectd-mod-df
-          collectd-mod-disk
-          collectd-mod-dns
-          collectd-mod-exec
-          collectd-mod-filecount
-          collectd-mod-match-regex
-          collectd-mod-mqtt
-          collectd-mod-netlink
-          collectd-mod-ping
-          collectd-mod-protocols
-          collectd-mod-snmp
-          collectd-mod-table
-          collectd-mod-tcpconns
-          collectd-mod-uptime
-          collectd-mod-write-http
-          collectd-mod-logfile
-          collectd-mod-syslog
-          collectd-mod-thermal
-          collectd-mod-network
-          2>&1
-        register: collectd_modx_status
-        changed_when: collectd_modx_status.rc == 0
-        failed_when: collectd_modx_status.rc > 1
-      - name: Show installation status - CollectD extended modules
-        debug: msg="{{ collectd_modx_status.stdout_lines }} +++ RC {{ collectd_modx_status.rc }} +++ ERR {{ collectd_modx_status.stderr_lines }}"
-        when: collectd_modx_status.rc != 1
+    - name: Install CollectD extended modules (csv, df, exec, ...)
+      raw: >
+        [[ ! -f {{ collectd_modx_path }} ]] &&
+        opkg install
+        collectd-mod-swap
+        collectd-mod-csv
+        collectd-mod-curl
+        collectd-mod-df
+        collectd-mod-disk
+        collectd-mod-dns
+        collectd-mod-exec
+        collectd-mod-filecount
+        collectd-mod-match-regex
+        collectd-mod-mqtt
+        collectd-mod-netlink
+        collectd-mod-ping
+        collectd-mod-protocols
+        collectd-mod-snmp
+        collectd-mod-table
+        collectd-mod-tcpconns
+        collectd-mod-uptime
+        collectd-mod-write-http
+        collectd-mod-logfile
+        collectd-mod-syslog
+        collectd-mod-thermal
+        collectd-mod-network
+        2>&1
+      register: collectd_modx_status
+      changed_when: collectd_modx_status.rc == 0
+      failed_when: collectd_modx_status.rc > 1
+    - name: Show installation status - CollectD extended modules
+      debug: msg="{{ collectd_modx_status.stdout_lines }} +++ RC {{ collectd_modx_status.rc }} +++ ERR {{ collectd_modx_status.stderr_lines }}"
+      when: collectd_modx_status.rc != 1
 
-      # Install EXEC module
-      - name: Check if {{ gsmkpi_path }} command exists
-        raw: "[[ -f {{ gsmkpi_path }} ]]"
-        register: gsmkpi_status
-        changed_when: false
-        failed_when: gsmkpi_status.rc > 1
-      - name: Set {{ gsmkpi_path }} on paths to preserve next restore/upgrade
-        set_fact:
-          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [gsmkpi_path] }}"
-        when: gsmkpi_status.rc == 0
+    # Install EXEC module
+    - name: Check if {{ gsmkpi_path }} command exists
+      raw: "[[ -f {{ gsmkpi_path }} ]]"
+      register: gsmkpi_status
+      changed_when: false
+      failed_when: gsmkpi_status.rc > 1
+    - name: Set {{ gsmkpi_path }} on paths to preserve next restore/upgrade
+      set_fact:
+        sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [gsmkpi_path] }}"
+      when: gsmkpi_status.rc == 0
 
-      # - name: Check if {{ luci_statistics_exec_lua_path }} script exists
-      #   raw: "[[ -f {{ luci_statistics_exec_lua_path }} ]]"
-      #   register: lua_status
-      #   changed_when: false
-      #   failed_when: lua_status.rc > 1
-      # - name: Set {{ luci_statistics_exec_lua_path }} on paths to preserve next restore/upgrade
-      #   set_fact:
-      #     sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [luci_statistics_exec_lua_path] }}"
-      #   when: lua_status.rc == 0
+    # - name: Check if {{ luci_statistics_exec_lua_path }} script exists
+    #   raw: "[[ -f {{ luci_statistics_exec_lua_path }} ]]"
+    #   register: lua_status
+    #   changed_when: false
+    #   failed_when: lua_status.rc > 1
+    # - name: Set {{ luci_statistics_exec_lua_path }} on paths to preserve next restore/upgrade
+    #   set_fact:
+    #     sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [luci_statistics_exec_lua_path] }}"
+    #   when: lua_status.rc == 0
 
-      - name: Enable CollectD at boot and start it
-        raw: "[[ ! -L {{ collectd_enabled_path }} ]] && {{ collectd_path }} enable && {{ collectd_path }} start 2>&1"
-        register: collectd_enabled_status
-        changed_when: collectd_enabled_status.rc == 0
-        failed_when: collectd_enabled_status.rc > 1
-      - name: Show installation status - CollectD start and enable at start
-        debug: msg="{{ collectd_enabled_status.stdout_lines }} +++ RC {{ collectd_enabled_status.rc }} +++ ERR {{ collectd_enabled_status.stderr_lines }}"
-        when: collectd_enabled_status.rc != 1
+    - name: Enable CollectD at boot and start it
+      raw: "[[ ! -L {{ collectd_enabled_path }} ]] && {{ collectd_path }} enable && {{ collectd_path }} start 2>&1"
+      register: collectd_enabled_status
+      changed_when: collectd_enabled_status.rc == 0
+      failed_when: collectd_enabled_status.rc > 1
+    - name: Show installation status - CollectD start and enable at start
+      debug: msg="{{ collectd_enabled_status.stdout_lines }} +++ RC {{ collectd_enabled_status.rc }} +++ ERR {{ collectd_enabled_status.stderr_lines }}"
+      when: collectd_enabled_status.rc != 1
 
 #      # Install LUCI Statistics
 #      - name: Install LUCI Statistics (CollectD tool web interface)
@@ -316,50 +316,50 @@
 #        debug: msg="{{ luci_statistics_enabled_status.stdout_lines }} +++ RC {{ luci_statistics_enabled_status.rc }} +++ ERR {{ luci_statistics_enabled_status.stderr_lines }}"
 #        when: luci_statistics_enabled_status.rc != 1
 
-      # Install VNStat
-      - name: Install VNStat (collecting/monitoring GSM/LTE data plan)
-        raw: "[[ ! -x {{ vnstat_path }} ]] && opkg install {{ vnstat_package }} 2>&1"
-        register: vnstat_status
-        changed_when: vnstat_status.rc == 0
-        failed_when: vnstat_status.rc > 1
-      - name: Show installation status - VNStat
-        debug: msg="{{ vnstat_status.stdout_lines }} +++ RC {{ vnstat_status.rc }} +++ ERR {{ vnstat_status.stderr_lines }}"
-        when: vnstat_status.rc != 1
-      - name: Set {{ vnstat_config_path }} on paths to preserve next restore/upgrade
-        set_fact:
-          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [vnstat_config_path] }}"
+    # Install VNStat
+    - name: Install VNStat (collecting/monitoring GSM/LTE data plan)
+      raw: "[[ ! -x {{ vnstat_path }} ]] && opkg install {{ vnstat_package }} 2>&1"
+      register: vnstat_status
+      changed_when: vnstat_status.rc == 0
+      failed_when: vnstat_status.rc > 1
+    - name: Show installation status - VNStat
+      debug: msg="{{ vnstat_status.stdout_lines }} +++ RC {{ vnstat_status.rc }} +++ ERR {{ vnstat_status.stderr_lines }}"
+      when: vnstat_status.rc != 1
+    - name: Set {{ vnstat_config_path }} on paths to preserve next restore/upgrade
+      set_fact:
+        sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [vnstat_config_path] }}"
 
 
-      - name: Enable VNStat at boot and start it
-        raw: "[[ ! -L {{ vnstat_enabled_path }} ]] && {{ vnstat_path }} enable && {{ vnstat_path }} start 2>&1"
-        register: vnstat_enabled_status
-        changed_when: vnstat_enabled_status.rc == 0
-        failed_when: vnstat_enabled_status.rc > 1
-      - name: Show installation status - VNStat start and enable at start
-        debug: msg="{{ vnstat_enabled_status.stdout_lines }} +++ RC {{ vnstat_enabled_status.rc }} +++ ERR {{ vnstat_enabled_status.stderr_lines }}"
-        when: vnstat_enabled_status.rc != 1
+    - name: Enable VNStat at boot and start it
+      raw: "[[ ! -L {{ vnstat_enabled_path }} ]] && {{ vnstat_path }} enable && {{ vnstat_path }} start 2>&1"
+      register: vnstat_enabled_status
+      changed_when: vnstat_enabled_status.rc == 0
+      failed_when: vnstat_enabled_status.rc > 1
+    - name: Show installation status - VNStat start and enable at start
+      debug: msg="{{ vnstat_enabled_status.stdout_lines }} +++ RC {{ vnstat_enabled_status.rc }} +++ ERR {{ vnstat_enabled_status.stderr_lines }}"
+      when: vnstat_enabled_status.rc != 1
 
-      # Install BandwidthD
-      - name: Install BandwidthD (collecting/monitoring summary of traffic data by IP daily/weekly/monthly/yearly)
-        raw: "[[ ! -x {{ bandwidthd_path }} ]] && opkg --nodeps install {{ bandwidthd_package }} 2>&1"
-        register: bandwidthd_status
-        changed_when: bandwidthd_status.rc == 0
-        failed_when: bandwidthd_status.rc > 1
-      - name: Show installation status - BandwidthD
-        debug: msg="{{ bandwidthd_status.stdout_lines }} +++ RC {{ bandwidthd_status.rc }} +++ ERR {{ bandwidthd_status.stderr_lines }}"
-        when: bandwidthd_status.rc != 1
-      - name: Set {{ bandwidthd_config_path }} on paths to preserve next restore/upgrade
-        set_fact:
-          sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [bandwidthd_config_path] }}"
+    # Install BandwidthD
+    - name: Install BandwidthD (collecting/monitoring summary of traffic data by IP daily/weekly/monthly/yearly)
+      raw: "[[ ! -x {{ bandwidthd_path }} ]] && opkg --nodeps install {{ bandwidthd_package }} 2>&1"
+      register: bandwidthd_status
+      changed_when: bandwidthd_status.rc == 0
+      failed_when: bandwidthd_status.rc > 1
+    - name: Show installation status - BandwidthD
+      debug: msg="{{ bandwidthd_status.stdout_lines }} +++ RC {{ bandwidthd_status.rc }} +++ ERR {{ bandwidthd_status.stderr_lines }}"
+      when: bandwidthd_status.rc != 1
+    - name: Set {{ bandwidthd_config_path }} on paths to preserve next restore/upgrade
+      set_fact:
+        sysupgrade_config_preserve_paths: "{{ sysupgrade_config_preserve_paths + [bandwidthd_config_path] }}"
 
-      - name: Enable BandwidthD at boot and start it
-        raw: "[[ ! -L {{ bandwidthd_enabled_path }} ]] && {{ bandwidthd_path }} enable && {{ bandwidthd_path }} start 2>&1"
-        register: bandwidthd_enabled_status
-        changed_when: bandwidthd_enabled_status.rc == 0
-        failed_when: bandwidthd_enabled_status.rc > 1
-      - name: Show installation status - BandwidthD start and enable at start
-        debug: msg="{{ bandwidthd_enabled_status.stdout_lines }} +++ RC {{ bandwidthd_enabled_status.rc }} +++ ERR {{ banwidthd_enabled_status.stderr_lines }}"
-        when: bandwidthd_enabled_status.rc != 1
+    - name: Enable BandwidthD at boot and start it
+      raw: "[[ ! -L {{ bandwidthd_enabled_path }} ]] && {{ bandwidthd_path }} enable && {{ bandwidthd_path }} start 2>&1"
+      register: bandwidthd_enabled_status
+      changed_when: bandwidthd_enabled_status.rc == 0
+      failed_when: bandwidthd_enabled_status.rc > 1
+    - name: Show installation status - BandwidthD start and enable at start
+      debug: msg="{{ bandwidthd_enabled_status.stdout_lines }} +++ RC {{ bandwidthd_enabled_status.rc }} +++ ERR {{ banwidthd_enabled_status.stderr_lines }}"
+      when: bandwidthd_enabled_status.rc != 1
 
     - name: Ensure list of files is preserved for next upgrades
       block:
