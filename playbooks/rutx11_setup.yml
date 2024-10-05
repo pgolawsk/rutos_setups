@@ -156,7 +156,7 @@
 
     # Install HAProxy
     - name: Install HAProxy (TCP/HTTP load-balancer)
-      raw: "[[ ! -x  {{ haproxy_path }} ]] && opkg install {{ haproxy_package }} 2>&1"
+      raw: "[[ ! -x  {{ haproxy_path }} ]] && opkg -e {{ opkg_openwrt_distfeeds }} install {{ haproxy_package }} 2>&1"
       register: haproxy_status
       changed_when: haproxy_status.rc == 0
       failed_when: haproxy_status.rc > 1
@@ -191,7 +191,7 @@
 
     # Install Telegraf (feeding to InfluxDB)
     - name: Install Telegraf (feeding data to InfluxDB)
-      raw: "[[ ! -x  {{ telegraf_path }} ]] && opkg install {{ telegraf_package }} 2>&1"
+      raw: "[[ ! -x  {{ telegraf_path }} ]] && opkg -e {{ opkg_openwrt_distfeeds }} install {{ telegraf_package }} 2>&1"
       register: telegraf_status
       changed_when: telegraf_status.rc == 0
       failed_when: telegraf_status.rc > 1
@@ -213,7 +213,7 @@
 
     # Install CollectD and modules
     - name: Install CollectD tool
-      raw: "[[ ! -x {{ collectd_path }} ]] && opkg install {{ collectd_package }} 2>&1"
+      raw: "[[ ! -x {{ collectd_path }} ]] && opkg -e {{ opkg_openwrt_distfeeds }} install {{ collectd_package }} 2>&1"
       register: collectd_status
       changed_when: collectd_status.rc == 0
       failed_when: collectd_status.rc > 1
@@ -227,7 +227,7 @@
     - name: Install CollectD basic modules (cpu, memory, rrdtool, ...)
       raw: >
         [[ ! -f {{ collectd_mod1_path }} ]] &&
-        opkg install
+        opkg -e {{ opkg_openwrt_distfeeds }} install
         collectd-mod-cpu
         collectd-mod-interface
         collectd-mod-memory
@@ -247,7 +247,7 @@
     - name: Install CollectD extended modules (csv, df, exec, ...)
       raw: >
         [[ ! -f {{ collectd_modx_path }} ]] &&
-        opkg install
+        opkg -e {{ opkg_openwrt_distfeeds }} install
         collectd-mod-swap
         collectd-mod-csv
         collectd-mod-curl
@@ -330,7 +330,7 @@
 
     # Install VNStat
     - name: Install VNStat (collecting/monitoring GSM/LTE data plan)
-      raw: "[[ ! -x {{ vnstat_path }} ]] && opkg install {{ vnstat_package }} 2>&1"
+      raw: "[[ ! -x {{ vnstat_path }} ]] && opkg -e {{ opkg_openwrt_distfeeds }} install {{ vnstat_package }} 2>&1"
       register: vnstat_status
       changed_when: vnstat_status.rc == 0
       failed_when: vnstat_status.rc > 1
@@ -353,7 +353,7 @@
 
     # Install BandwidthD
     - name: Install BandwidthD (collecting/monitoring summary of traffic data by IP daily/weekly/monthly/yearly)
-      raw: "[[ ! -x {{ bandwidthd_path }} ]] && opkg --nodeps install {{ bandwidthd_package }} 2>&1"
+      raw: "[[ ! -x {{ bandwidthd_path }} ]] && opkg -e {{ opkg_openwrt_distfeeds }} --nodeps install {{ bandwidthd_package }} 2>&1"
       register: bandwidthd_status
       changed_when: bandwidthd_status.rc == 0
       failed_when: bandwidthd_status.rc > 1
