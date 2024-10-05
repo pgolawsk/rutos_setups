@@ -120,6 +120,7 @@
       register: opkg_update2_status
       changed_when: opkg_update_status.rc >= 0
       # failed_when: opkg_update_status.rc > 1
+      ignore_errors: true
     - name: Show OPKG update status
       debug: msg="{{ opkg_update_status.stdout_lines }} +++ RC {{ opkg_update2_status.rc }} +++ ERR {{ opkg_update2_status.stderr_lines }}"
 
