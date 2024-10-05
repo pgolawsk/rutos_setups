@@ -116,12 +116,12 @@
       debug: msg="{{ opkg_update_status.stdout_lines }} +++ RC {{ opkg_update_status.rc }} +++ ERR {{ opkg_update_status.stderr_lines }}"
       # when: opkg_update_status.rc != -1
     - name: Update repos for OpenWRT (OPKG -e <> update)
-      raw: "[[ ! -d {{ opkg_path }} ]] && opkg -e {{ opkg_openwrt_distfeeds }} update 2>&1"
+      raw: "opkg -e {{ opkg_openwrt_distfeeds }} update 2>&1"
       register: opkg_update2_status
       changed_when: opkg_update2_status.rc >= 0
       # failed_when: opkg_update_status.rc > 1
       ignore_errors: true
-    - name: Show OPKG update status
+    - name: Show OPKG -e <> update status
       debug: msg="{{ opkg_update2_status.stdout_lines }} +++ RC {{ opkg_update2_status.rc }} +++ ERR {{ opkg_update2_status.stderr_lines }}"
 
     # Install iperf3
