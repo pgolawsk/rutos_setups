@@ -16,6 +16,7 @@
 # Pawelo 20240105 added telegraf install
 # Pawelo 20241006 fixed comments block (script was not runnable)
 # Pawelo 20241006 fix for opkg openwrt folder with distfeeds.conf
+# Pawelo 20241006 force opkg update and ignore_errors in opkg update as there could be broken links in feeds.conf
 
 
 # * it installs:
