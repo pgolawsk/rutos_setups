@@ -32,7 +32,6 @@
   vars:
     data_folder: "/data"
     data_path: "/mnt/sda1"
-    opkg_path: "/tmp/opkg-lists"
     opkg_openwrt_distfeeds: "/etc/opkg/openwrt/distfeeds.conf"
     iperf3_package: "iperf3"
     iperf3_path: "/usr/bin/iperf3"
@@ -108,10 +107,11 @@
       when: link_status.rc > 1
 
     - name: Update repos for Teltonika (OPKG update)
-      raw: "[[ ! -d {{ opkg_path }} ]] && opkg update 2>&1"
+      raw: "opkg update 2>&1"
       register: opkg_update_status
       changed_when: opkg_update_status.rc == 0
       failed_when: opkg_update_status.rc > 1
+      ignore_errors: true
     - name: Show OPKG update status
       debug: msg="{{ opkg_update_status.stdout_lines }} +++ RC {{ opkg_update_status.rc }} +++ ERR {{ opkg_update_status.stderr_lines }}"
       # when: opkg_update_status.rc != -1
