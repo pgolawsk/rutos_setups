@@ -227,14 +227,13 @@
     - name: Install CollectD basic modules (cpu, memory, rrdtool, ...)
       raw: >
         [[ ! -f {{ collectd_mod1_path }} ]] &&
-        opkg -e {{ opkg_openwrt_distfeeds }} install
-        collectd-mod-cpu
-        collectd-mod-interface
-        collectd-mod-memory
-        collectd-mod-ping
-        collectd-mod-rrdtool
-        collectd-mod-wireless
-        collectd-mod-iwinfo
+        opkg -e {{ opkg_openwrt_distfeeds }} install \
+        collectd-mod-cpu \
+        collectd-mod-interface \
+        collectd-mod-memory \
+        collectd-mod-rrdtool \
+        collectd-mod-wireless \
+        collectd-mod-iwinfo \
         collectd-mod-load
         2>&1
       register: collectd_mod1_status
@@ -247,28 +246,28 @@
     - name: Install CollectD extended modules (csv, df, exec, ...)
       raw: >
         [[ ! -f {{ collectd_modx_path }} ]] &&
-        opkg -e {{ opkg_openwrt_distfeeds }} install
-        collectd-mod-swap
-        collectd-mod-csv
-        collectd-mod-curl
-        collectd-mod-df
-        collectd-mod-disk
-        collectd-mod-dns
-        collectd-mod-exec
-        collectd-mod-filecount
-        collectd-mod-match-regex
-        collectd-mod-mqtt
-        collectd-mod-netlink
-        collectd-mod-ping
-        collectd-mod-protocols
-        collectd-mod-snmp
-        collectd-mod-table
-        collectd-mod-tcpconns
-        collectd-mod-uptime
-        collectd-mod-write-http
-        collectd-mod-logfile
-        collectd-mod-syslog
-        collectd-mod-thermal
+        opkg -e {{ opkg_openwrt_distfeeds }} install \
+        collectd-mod-swap \
+        collectd-mod-csv \
+        collectd-mod-curl \
+        collectd-mod-df \
+        collectd-mod-disk \
+        collectd-mod-dns \
+        collectd-mod-exec \
+        collectd-mod-filecount \
+        collectd-mod-match-regex \
+        collectd-mod-mqtt \
+        collectd-mod-netlink \
+        collectd-mod-ping \
+        collectd-mod-protocols \
+        collectd-mod-snmp \
+        collectd-mod-table \
+        collectd-mod-tcpconns \
+        collectd-mod-uptime \
+        collectd-mod-write-http \
+        collectd-mod-logfile \
+        collectd-mod-syslog \
+        collectd-mod-thermal \
         collectd-mod-network
         2>&1
       register: collectd_modx_status
